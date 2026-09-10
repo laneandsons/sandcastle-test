@@ -17,8 +17,10 @@ uv run hello-world python
 ```
 
 Snippets are printed inside a tidy, rounded TUI frame with a titled header
-and a line-number gutter. Colors are used automatically when writing to a
-terminal (and disabled when piped, or when `NO_COLOR` is set).
+and a line-number gutter. The frame is painted in the colors of the trans
+pride flag — light blue, pink, and white stripes running top to bottom.
+Colors are used automatically when writing to a terminal (and disabled when
+piped, or when `NO_COLOR` is set).
 
 To print the raw snippet without the frame — handy for piping or copying —
 use `--plain`:
