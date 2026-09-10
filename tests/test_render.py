@@ -23,6 +23,14 @@ class RenderExampleTests(unittest.TestCase):
         out = render_example("python", 'print("Hello, World!")', color=True)
         self.assertIn("\033[", out)
 
+    def test_trans_pride_stripes_when_colored(self) -> None:
+        # A frame tall enough to span all five stripes should use each of the
+        # trans-pride hues: light blue, pink, and white.
+        code = "\n".join(str(n) for n in range(8))
+        out = render_example("python", code, color=True)
+        for stripe in ("\033[38;5;117m", "\033[38;5;218m", "\033[38;5;231m"):
+            self.assertIn(stripe, out)
+
     def test_frame_lines_are_equal_width(self) -> None:
         code = 'main :: IO ()\nmain = putStrLn "Hello, World!"'
         out = render_example("haskell", code, color=False)

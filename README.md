@@ -18,7 +18,7 @@ uv run hello-world python
 
 Snippets are printed inside a tidy, rounded TUI frame with a titled header
 and a line-number gutter. The header is dressed up with a per-language emoji
-badge (🐍 Python, 🦀 Rust, ☕ Java, and friends) for a little extra flair.
+badge (🐍 Python, 🦀 Rust, ☕ Java, and friends) for a little extra flair.The frame is painted in the colors of the trans pride flag — light blue, pink, and white stripes running top to bottom.
 Colors are used automatically when writing to a terminal (and disabled when
 piped, or when `NO_COLOR` is set).
 

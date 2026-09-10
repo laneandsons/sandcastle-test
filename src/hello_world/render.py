@@ -40,7 +40,15 @@ _VERTICAL = "│"  # │
 _RESET = "\033[0m"
 _DIM = "\033[2m"
 _BOLD = "\033[1m"
-_CYAN = "\033[36m"
+
+# Trans pride palette. The flag has five horizontal stripes — light blue,
+# pink, white, pink, light blue — so we paint the frame in those colors to
+# fly the flag proudly around every snippet. 256-color codes keep the hues
+# close to the real thing (light blue #5BCEFA, pink #F5A9B8, white #FFFFFF).
+_TRANS_BLUE = "\033[38;5;117m"
+_TRANS_PINK = "\033[38;5;218m"
+_TRANS_WHITE = "\033[38;5;231m"
+_TRANS_STRIPES = (_TRANS_BLUE, _TRANS_PINK, _TRANS_WHITE, _TRANS_PINK, _TRANS_BLUE)
 
 # Horizontal padding between the frame and its contents.
 _PAD = 1
@@ -82,6 +90,17 @@ def emoji_for(language: str) -> str:
     """Return the header badge emoji for *language*."""
     return _LANG_EMOJI.get(language, _DEFAULT_EMOJI)
 
+def _stripe(row: int, total: int) -> str:
+    """Pick a trans-pride stripe color for *row* out of *total* frame rows.
+
+    Rows are spread evenly across the five stripes (top to bottom) so the
+    whole frame reads like the flag, regardless of how many lines it has.
+    """
+    if total <= 1:
+        return _TRANS_STRIPES[len(_TRANS_STRIPES) // 2]  # white middle stripe
+    idx = row * len(_TRANS_STRIPES) // total
+    return _TRANS_STRIPES[min(idx, len(_TRANS_STRIPES) - 1)]
+
 
 def render_lines(
     language: str,
@@ -110,20 +129,27 @@ def render_lines(
     inner = max(max((len(r) for r in plain_rows), default=0), title_w) + _PAD * 2
 
     # Header: ╭─ 🐍 title ──────╮
-    styled_title = _style(title, _BOLD, _CYAN, color=color)
-    header_fill = _HORIZONTAL * (inner - title_w - 1)
+
+    # Total frame rows (header + body + footer) so stripes span the whole frame.
+    total_rows = len(lines) + 2
+    # Header: ╭─ title ──────╮ (top stripe)
+    top = _stripe(0, total_rows)
+    styled_title = _style(title, _BOLD, top, color=color)
+    header_fill = _HORIZONTAL * (inner - len(title) - 1)
     header = _style(
-        _TOP_LEFT + _HORIZONTAL, _DIM, color=color
-    ) + styled_title + _style(header_fill + _TOP_RIGHT, _DIM, color=color)
+        _TOP_LEFT + _HORIZONTAL, top, color=color
+    ) + styled_title + _style(header_fill + _TOP_RIGHT, top, color=color)
 
-    # Footer: ╰──────────────╯
-    footer = _style(_BOTTOM_LEFT + _HORIZONTAL * inner + _BOTTOM_RIGHT, _DIM, color=color)
+    # Footer: ╰──────────────╯ (bottom stripe)
+    bottom = _stripe(total_rows - 1, total_rows)
+    footer = _style(_BOTTOM_LEFT + _HORIZONTAL * inner + _BOTTOM_RIGHT, bottom, color=color)
 
-    border = _style(_VERTICAL, _DIM, color=color)
     pad = " " * _PAD
 
     out = [header]
     for i, line in enumerate(lines, 1):
+        stripe = _stripe(i, total_rows)
+        border = _style(_VERTICAL, stripe, color=color)
         gutter = _style(f"{i:>{gutter_w}} {_VERTICAL}", _DIM, color=color)
         content = f"{gutter} {line}"
         # Right-pad using the plain measurement so colored rows still align.
