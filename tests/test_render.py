@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import io
 import unittest
 
-from hello_world.render import render_example
+from hello_world.render import animate_example, render_example, render_lines
 
 
 class RenderExampleTests(unittest.TestCase):
@@ -46,6 +47,29 @@ class RenderExampleTests(unittest.TestCase):
         out = render_example("python", code, color=False)
         for token in ("one", "two", "three"):
             self.assertIn(token, out)
+
+
+class AnimateExampleTests(unittest.TestCase):
+    def test_render_lines_matches_render_example(self) -> None:
+        code = "a\nb\nc"
+        rows = render_lines("python", code, color=False)
+        self.assertEqual("\n".join(rows), render_example("python", code, color=False))
+
+    def test_animate_writes_full_frame_when_not_tty(self) -> None:
+        # A plain StringIO is not a TTY, so animation collapses to one write.
+        stream = io.StringIO()
+        code = "x\ny"
+        animate_example("python", code, color=False, stream=stream)
+        self.assertEqual(
+            stream.getvalue().rstrip("\n"),
+            render_example("python", code, color=False),
+        )
+
+    def test_animate_skips_sleep_when_not_tty(self) -> None:
+        stream = io.StringIO()
+        # delay is intentionally large; a non-TTY stream must never sleep.
+        animate_example("python", "hello", color=False, delay=100.0, stream=stream)
+        self.assertIn("hello", stream.getvalue())
 
 
 if __name__ == "__main__":

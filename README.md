@@ -27,6 +27,14 @@ use `--plain`:
 uv run hello-world python --plain
 ```
 
+For a little flair, `--animate` reveals the framed snippet one line at a time.
+The animation is automatically skipped when output is piped, so scripts still
+get the full frame instantly:
+
+```sh
+uv run hello-world python --animate
+```
+
 List all supported languages:
 
 ```sh

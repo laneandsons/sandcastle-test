@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 import sys
+import time
 
 # Box-drawing characters for a rounded frame.
 _TOP_LEFT = "╭"  # ╭
@@ -44,18 +45,17 @@ def _style(text: str, *codes: str, color: bool) -> str:
     return "".join(codes) + text + _RESET
 
 
-def render_example(
+def render_lines(
     language: str,
     code: str,
     *,
     color: bool | None = None,
     stream=None,
-) -> str:
-    """Return *code* wrapped in a titled, rounded TUI frame.
+) -> list[str]:
+    """Return the framed *code* as a list of output lines (header, body, footer).
 
-    The frame header shows *language*, and each line is prefixed with a dim
-    line-number gutter. When *color* is None, color is auto-detected from
-    *stream* (defaulting to stdout).
+    See :func:`render_example` for the frame layout; this variant returns the
+    individual rows so callers (e.g. the animator) can emit them one at a time.
     """
     if color is None:
         color = _supports_color(stream if stream is not None else sys.stdout)
@@ -92,4 +92,54 @@ def render_example(
         out.append(f"{border}{pad}{content}{right}{pad}{border}")
     out.append(footer)
 
-    return "\n".join(out)
+    return out
+
+
+def render_example(
+    language: str,
+    code: str,
+    *,
+    color: bool | None = None,
+    stream=None,
+) -> str:
+    """Return *code* wrapped in a titled, rounded TUI frame.
+
+    The frame header shows *language*, and each line is prefixed with a dim
+    line-number gutter. When *color* is None, color is auto-detected from
+    *stream* (defaulting to stdout).
+    """
+    return "\n".join(
+        render_lines(language, code, color=color, stream=stream)
+    )
+
+
+def animate_example(
+    language: str,
+    code: str,
+    *,
+    color: bool | None = None,
+    delay: float = 0.06,
+    stream=None,
+) -> None:
+    """Print the framed *code* to *stream*, revealing one row at a time.
+
+    Each row of the frame is written with a short *delay* in between, so the
+    snippet appears to "unfold" line by line. When *stream* is not a TTY the
+    animation is skipped and the frame is printed all at once, keeping piped
+    output clean. Color is auto-detected from *stream* unless given.
+    """
+    if stream is None:
+        stream = sys.stdout
+
+    is_tty = bool(getattr(stream, "isatty", lambda: False)())
+    rows = render_lines(language, code, color=color, stream=stream)
+
+    if not is_tty or delay <= 0:
+        stream.write("\n".join(rows) + "\n")
+        stream.flush()
+        return
+
+    for row in rows:
+        stream.write(row + "\n")
+        stream.flush()
+        time.sleep(delay)
