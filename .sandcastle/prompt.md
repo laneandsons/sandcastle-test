@@ -7,9 +7,11 @@
 
 <!-- Describe what the agent should do. -->
 
-Build a small CLI tool that accepts one argument, a language name, and outputs a "Hello World" example in that language. Make sure to include the languages Gleam and Haskell, and half a dozen other highly used languages.
+Read the Sandcastle issues available for this repo.
+If it is empty, Close the issue and proceed to the next one.
 
-Please build this in Python using uv. 
+If there is work to do, please perform the work and create a PR, then go to the next issue.
 
 # Done
+
 When the task is complete, output <promise>COMPLETE</promise> to signal early termination.

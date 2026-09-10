@@ -9,4 +9,14 @@ await run({
   agent: claudeCode("claude-opus-4-8"),
   sandbox: docker(),
   promptFile: "./.sandcastle/prompt.md",
+  logging: { type: "stdout" },
+  hooks: {
+    host: {
+      onSandboxReady: [
+        {
+          command: "echo Setup complete!",
+        },
+      ],
+    },
+  },
 });
