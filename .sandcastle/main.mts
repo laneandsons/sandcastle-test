@@ -9,7 +9,7 @@ await run({
   agent: claudeCode("claude-opus-4-8"),
   sandbox: docker(),
   promptFile: "./.sandcastle/prompt.md",
-  logging: { type: "stdout" },
+  logging: { type: "stdout", verbose: true },
   hooks: {
     host: {
       onSandboxReady: [

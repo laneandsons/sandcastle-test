@@ -8,9 +8,10 @@
 <!-- Describe what the agent should do. -->
 
 Read the Sandcastle issues available for this repo.
+
 If it is empty, Close the issue and proceed to the next one.
 
-If there is work to do, please perform the work and create a PR, then go to the next issue.
+If there is work to do, please perform the work and create a PR, then go to the next issue and repeat.
 
 # Done
 
