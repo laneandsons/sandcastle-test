@@ -5,7 +5,13 @@ from __future__ import annotations
 import io
 import unittest
 
-from hello_world.render import animate_example, render_example, render_lines
+from hello_world.render import (
+    animate_example,
+    display_width,
+    emoji_for,
+    render_example,
+    render_lines,
+)
 
 
 class RenderExampleTests(unittest.TestCase):
@@ -20,12 +26,23 @@ class RenderExampleTests(unittest.TestCase):
     def test_frame_lines_are_equal_width(self) -> None:
         code = 'main :: IO ()\nmain = putStrLn "Hello, World!"'
         out = render_example("haskell", code, color=False)
-        widths = {len(line) for line in out.splitlines()}
+        # Measure by terminal column width so the emoji badge (a double-width
+        # glyph in the header) doesn't register as a mismatch.
+        widths = {display_width(line) for line in out.splitlines()}
         self.assertEqual(len(widths), 1, out)
 
     def test_header_contains_language_title(self) -> None:
         out = render_example("rust", "fn main() {}", color=False)
         self.assertIn(" rust ", out.splitlines()[0])
+
+    def test_header_shows_language_emoji(self) -> None:
+        out = render_example("python", 'print("Hello, World!")', color=False)
+        self.assertIn(emoji_for("python"), out.splitlines()[0])
+        self.assertEqual(emoji_for("python"), "🐍")
+
+    def test_unknown_language_gets_default_emoji(self) -> None:
+        # Every rendered frame carries some badge, even for odd language keys.
+        self.assertTrue(emoji_for("brainfuck"))
 
     def test_rounded_corners_present(self) -> None:
         out = render_example("go", "package main", color=False)

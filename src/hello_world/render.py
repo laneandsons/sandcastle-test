@@ -10,6 +10,23 @@ from __future__ import annotations
 import os
 import sys
 import time
+import unicodedata
+
+# A little flair: a per-language emoji shown in the frame header. Languages
+# without a specific badge fall back to a friendly sparkle.
+_LANG_EMOJI: dict[str, str] = {
+    "gleam": "✨",
+    "haskell": "🎓",
+    "python": "🐍",
+    "javascript": "🟨",
+    "typescript": "🔷",
+    "rust": "🦀",
+    "go": "🐹",
+    "ruby": "💎",
+    "java": "☕",
+    "c": "🔧",
+}
+_DEFAULT_EMOJI = "✨"
 
 # Box-drawing characters for a rounded frame.
 _TOP_LEFT = "╭"  # ╭
@@ -45,6 +62,27 @@ def _style(text: str, *codes: str, color: bool) -> str:
     return "".join(codes) + text + _RESET
 
 
+def display_width(text: str) -> int:
+    """Return the terminal column width of *text*.
+
+    Emoji and other East Asian "wide"/"fullwidth" characters occupy two
+    columns, so the frame must measure by display width (not ``len``) to stay
+    aligned once emoji are added to the header.
+    """
+    width = 0
+    for ch in text:
+        if unicodedata.east_asian_width(ch) in ("W", "F"):
+            width += 2
+        else:
+            width += 1
+    return width
+
+
+def emoji_for(language: str) -> str:
+    """Return the header badge emoji for *language*."""
+    return _LANG_EMOJI.get(language, _DEFAULT_EMOJI)
+
+
 def render_lines(
     language: str,
     code: str,
@@ -66,12 +104,14 @@ def render_lines(
     # Plain (uncolored) body rows, used to measure the required inner width.
     plain_rows = [f"{i:>{gutter_w}} {_VERTICAL} {line}" for i, line in enumerate(lines, 1)]
 
-    title = f" {language} "
-    inner = max(max((len(r) for r in plain_rows), default=0), len(title)) + _PAD * 2
+    # A per-language emoji badge adds a little flair to the header title.
+    title = f" {emoji_for(language)} {language} "
+    title_w = display_width(title)
+    inner = max(max((len(r) for r in plain_rows), default=0), title_w) + _PAD * 2
 
-    # Header: ╭─ title ──────╮
+    # Header: ╭─ 🐍 title ──────╮
     styled_title = _style(title, _BOLD, _CYAN, color=color)
-    header_fill = _HORIZONTAL * (inner - len(title) - 1)
+    header_fill = _HORIZONTAL * (inner - title_w - 1)
     header = _style(
         _TOP_LEFT + _HORIZONTAL, _DIM, color=color
     ) + styled_title + _style(header_fill + _TOP_RIGHT, _DIM, color=color)
