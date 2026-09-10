@@ -90,6 +90,7 @@ def emoji_for(language: str) -> str:
     """Return the header badge emoji for *language*."""
     return _LANG_EMOJI.get(language, _DEFAULT_EMOJI)
 
+
 def _stripe(row: int, total: int) -> str:
     """Pick a trans-pride stripe color for *row* out of *total* frame rows.
 
@@ -128,14 +129,13 @@ def render_lines(
     title_w = display_width(title)
     inner = max(max((len(r) for r in plain_rows), default=0), title_w) + _PAD * 2
 
-    # Header: ╭─ 🐍 title ──────╮
-
     # Total frame rows (header + body + footer) so stripes span the whole frame.
     total_rows = len(lines) + 2
+
     # Header: ╭─ title ──────╮ (top stripe)
     top = _stripe(0, total_rows)
     styled_title = _style(title, _BOLD, top, color=color)
-    header_fill = _HORIZONTAL * (inner - len(title) - 1)
+    header_fill = _HORIZONTAL * (inner - title_w - 1)
     header = _style(
         _TOP_LEFT + _HORIZONTAL, top, color=color
     ) + styled_title + _style(header_fill + _TOP_RIGHT, top, color=color)
