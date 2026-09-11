@@ -37,6 +37,15 @@ get the full frame instantly:
 uv run hello-world python --animate
 ```
 
+For a bit more razzamatazz, `--shimmer` keeps the frame in place but lets the
+trans-pride colors gently flow down through the border. It runs until you
+press Ctrl-C, and — like `--animate` — collapses to a single static frame when
+output is piped or colors are disabled:
+
+```sh
+uv run hello-world python --shimmer
+```
+
 List all supported languages:
 
 ```sh

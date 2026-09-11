@@ -11,6 +11,7 @@ from hello_world.render import (
     emoji_for,
     render_example,
     render_lines,
+    shimmer_example,
 )
 
 
@@ -94,6 +95,54 @@ class AnimateExampleTests(unittest.TestCase):
         stream = io.StringIO()
         # delay is intentionally large; a non-TTY stream must never sleep.
         animate_example("python", "hello", color=False, delay=100.0, stream=stream)
+        self.assertIn("hello", stream.getvalue())
+
+
+class StripeOffsetTests(unittest.TestCase):
+    def test_offset_zero_matches_static_frame(self) -> None:
+        # The default offset must reproduce the original static flag exactly.
+        code = "a\nb\nc\nd"
+        base = render_lines("python", code, color=True)
+        same = render_lines("python", code, color=True, stripe_offset=0)
+        self.assertEqual(base, same)
+
+    def test_offset_shifts_colors(self) -> None:
+        # Shifting by one stripe should recolor the frame (movement!) while
+        # keeping the layout byte-for-byte identical once colors are stripped.
+        code = "a\nb\nc\nd"
+        base = render_lines("python", code, color=True)
+        shifted = render_lines("python", code, color=True, stripe_offset=1)
+        self.assertNotEqual(base, shifted)
+        # Layout (with color removed) is unchanged across offsets.
+        plain_base = render_lines("python", code, color=False, stripe_offset=0)
+        plain_shift = render_lines("python", code, color=False, stripe_offset=1)
+        self.assertEqual(plain_base, plain_shift)
+
+    def test_offset_wraps_around_stripe_count(self) -> None:
+        # Offsetting by a full cycle of stripes returns to the same coloring.
+        code = "\n".join("x" for _ in range(6))
+        base = render_lines("python", code, color=True, stripe_offset=0)
+        wrapped = render_lines("python", code, color=True, stripe_offset=5)
+        self.assertEqual(base, wrapped)
+
+
+class ShimmerExampleTests(unittest.TestCase):
+    def test_shimmer_writes_static_frame_when_not_tty(self) -> None:
+        # A StringIO is not a TTY, so the shimmer collapses to a single frame.
+        stream = io.StringIO()
+        code = "x\ny"
+        shimmer_example("python", code, color=False, stream=stream)
+        self.assertEqual(
+            stream.getvalue().rstrip("\n"),
+            render_example("python", code, color=False),
+        )
+
+    def test_shimmer_skips_animation_when_color_disabled(self) -> None:
+        # Even with a positive delay, no color means no in-place redraw loop,
+        # so there must be no cursor-movement escape sequences.
+        stream = io.StringIO()
+        shimmer_example("python", "hello", color=False, delay=100.0, stream=stream)
+        self.assertNotIn("\033[?25l", stream.getvalue())
         self.assertIn("hello", stream.getvalue())
 
 

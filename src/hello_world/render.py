@@ -91,16 +91,22 @@ def emoji_for(language: str) -> str:
     return _LANG_EMOJI.get(language, _DEFAULT_EMOJI)
 
 
-def _stripe(row: int, total: int) -> str:
+def _stripe(row: int, total: int, offset: int = 0) -> str:
     """Pick a trans-pride stripe color for *row* out of *total* frame rows.
 
     Rows are spread evenly across the five stripes (top to bottom) so the
     whole frame reads like the flag, regardless of how many lines it has.
+
+    *offset* shifts every row's color by that many stripes (wrapping around),
+    which lets the shimmer animation drift the palette down through the frame
+    without changing the layout. With the default ``offset=0`` the mapping is
+    exactly the static flag.
     """
+    n = len(_TRANS_STRIPES)
     if total <= 1:
-        return _TRANS_STRIPES[len(_TRANS_STRIPES) // 2]  # white middle stripe
-    idx = row * len(_TRANS_STRIPES) // total
-    return _TRANS_STRIPES[min(idx, len(_TRANS_STRIPES) - 1)]
+        return _TRANS_STRIPES[(n // 2 + offset) % n]  # white middle stripe
+    idx = row * n // total + offset
+    return _TRANS_STRIPES[idx % n]
 
 
 def render_lines(
@@ -109,11 +115,17 @@ def render_lines(
     *,
     color: bool | None = None,
     stream=None,
+    stripe_offset: int = 0,
 ) -> list[str]:
     """Return the framed *code* as a list of output lines (header, body, footer).
 
     See :func:`render_example` for the frame layout; this variant returns the
     individual rows so callers (e.g. the animator) can emit them one at a time.
+
+    *stripe_offset* rotates the trans-pride stripe colors down through the
+    frame (see :func:`_stripe`); the shimmer animation increments it each frame
+    to create subtle flowing movement. The layout is identical for every
+    offset, so frames can be redrawn in place.
     """
     if color is None:
         color = _supports_color(stream if stream is not None else sys.stdout)
@@ -133,7 +145,7 @@ def render_lines(
     total_rows = len(lines) + 2
 
     # Header: ╭─ title ──────╮ (top stripe)
-    top = _stripe(0, total_rows)
+    top = _stripe(0, total_rows, stripe_offset)
     styled_title = _style(title, _BOLD, top, color=color)
     header_fill = _HORIZONTAL * (inner - title_w - 1)
     header = _style(
@@ -141,14 +153,14 @@ def render_lines(
     ) + styled_title + _style(header_fill + _TOP_RIGHT, top, color=color)
 
     # Footer: ╰──────────────╯ (bottom stripe)
-    bottom = _stripe(total_rows - 1, total_rows)
+    bottom = _stripe(total_rows - 1, total_rows, stripe_offset)
     footer = _style(_BOTTOM_LEFT + _HORIZONTAL * inner + _BOTTOM_RIGHT, bottom, color=color)
 
     pad = " " * _PAD
 
     out = [header]
     for i, line in enumerate(lines, 1):
-        stripe = _stripe(i, total_rows)
+        stripe = _stripe(i, total_rows, stripe_offset)
         border = _style(_VERTICAL, stripe, color=color)
         gutter = _style(f"{i:>{gutter_w}} {_VERTICAL}", _DIM, color=color)
         content = f"{gutter} {line}"
@@ -209,3 +221,64 @@ def animate_example(
         stream.write(row + "\n")
         stream.flush()
         time.sleep(delay)
+
+
+# ANSI cursor controls for redrawing the frame in place during the shimmer.
+_HIDE_CURSOR = "\033[?25l"
+_SHOW_CURSOR = "\033[?25h"
+
+
+def shimmer_example(
+    language: str,
+    code: str,
+    *,
+    color: bool | None = None,
+    delay: float = 0.12,
+    cycles: int | None = None,
+    stream=None,
+) -> None:
+    """Draw the framed *code* and let the trans-pride colors gently flow.
+
+    The frame is redrawn in place, shifting the stripe palette down by one
+    stripe each frame, so the colors appear to drift through the border —
+    subtle movement without any change to the layout. It runs until
+    interrupted with Ctrl-C by default, or for a fixed number of *cycles*.
+
+    The shimmer needs a color-capable TTY: when *stream* is not a TTY, color
+    is disabled, or *delay* is not positive, the frame is printed once as a
+    static snippet so piped and non-interactive output stays clean.
+    """
+    if stream is None:
+        stream = sys.stdout
+    if color is None:
+        color = _supports_color(stream)
+
+    is_tty = bool(getattr(stream, "isatty", lambda: False)())
+
+    if not is_tty or not color or delay <= 0:
+        stream.write(render_example(language, code, color=color, stream=stream) + "\n")
+        stream.flush()
+        return
+
+    height = len(render_lines(language, code, color=color, stream=stream))
+    move_to_top = f"\033[{height - 1}A\r"
+
+    stream.write(_HIDE_CURSOR)
+    offset = 0
+    try:
+        while cycles is None or offset < cycles:
+            if offset > 0:
+                stream.write(move_to_top)
+            rows = render_lines(
+                language, code, color=color, stream=stream, stripe_offset=offset
+            )
+            stream.write("\n".join(rows))
+            stream.flush()
+            offset += 1
+            time.sleep(delay)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        # Leave the cursor on a fresh line below the (final) frame.
+        stream.write("\n" + _SHOW_CURSOR)
+        stream.flush()

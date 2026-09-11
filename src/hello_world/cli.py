@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from hello_world.render import animate_example, render_example
+from hello_world.render import animate_example, render_example, shimmer_example
 
 # Each entry maps a language name to a ready-to-run "Hello, World!" snippet.
 EXAMPLES: dict[str, str] = {
@@ -90,6 +90,13 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="reveal the framed snippet one line at a time (skipped when piped)",
     )
+    parser.add_argument(
+        "-s",
+        "--shimmer",
+        action="store_true",
+        help="animate the frame with flowing trans-pride colors until Ctrl-C "
+        "(skipped when piped)",
+    )
     return parser
 
 
@@ -119,6 +126,8 @@ def main(argv: list[str] | None = None) -> int:
     code = EXAMPLES[key]
     if args.plain:
         print(code)
+    elif args.shimmer:
+        shimmer_example(key, code)
     elif args.animate:
         animate_example(key, code)
     else:
